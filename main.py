@@ -17,11 +17,15 @@ def load_done_urls():
         return set(line.strip() for line in f if line.strip())
 
 
-def get_article_links(browser, keyword):
-    """Extract all article links by paginating through search results."""
+def get_article_links(browser, keyword, max_links=0):
+    """Extract article links by paginating through search results.
+
+    max_links: stop fetching pages once this many new links are collected (0 = all).
+    """
     all_links = []
     seen_hrefs = set()
     offset = 0
+    page_num = 0
 
     while True:
         ctx = browser.new_context()
@@ -55,9 +59,13 @@ def get_article_links(browser, keyword):
                 all_links.append(link)
                 new_count += 1
 
-        print(f"  Page {offset // 20 + 1}: found {new_count} new links")
+        page_num += 1
+        print(f"  Page {page_num}: found {new_count} new links (total: {len(all_links)})")
 
         if not has_next or new_count == 0:
+            break
+
+        if max_links and len(all_links) >= max_links:
             break
 
         offset += 20
@@ -128,7 +136,7 @@ def scrape_articles(keyword, max_articles, wait_seconds):
         browser = p.chromium.launch(headless=False)
 
         print(f"Searching for '{keyword}'...")
-        articles = get_article_links(browser, keyword)
+        articles = get_article_links(browser, keyword, max_articles)
 
         # Filter out already-scraped URLs
         remaining = [a for a in articles if a["href"] not in done_urls]
