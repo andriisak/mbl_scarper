@@ -31,7 +31,15 @@ def get_article_links(browser, keyword, max_links=0):
         ctx = browser.new_context()
         page = ctx.new_page()
         url = SEARCH_BASE_URL.format(keyword=keyword, offset=offset)
-        page.goto(url, wait_until="domcontentloaded")
+
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        except Exception as e:
+            print(f"  Page load timed out for offset {offset}, skipping: {e}")
+            ctx.close()
+            offset += 20
+            continue
+
         time.sleep(CF_WAIT_SECONDS)
 
         links = page.eval_on_selector_all(
@@ -77,7 +85,7 @@ def scrape_article(browser, url, wait_seconds):
     """Open a fresh context, navigate to article, extract date + body."""
     ctx = browser.new_context()
     page = ctx.new_page()
-    page.goto(url, wait_until="domcontentloaded")
+    page.goto(url, wait_until="domcontentloaded", timeout=60000)
     time.sleep(wait_seconds)
 
     # Check for Cloudflare challenge
